@@ -97,7 +97,7 @@ services:
 
 networks:
   laravel:
-    #d driver: bridge
+    driver: bridge
 
 volumes:
   dbdata:
