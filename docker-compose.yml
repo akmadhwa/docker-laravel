@@ -1,0 +1,104 @@
+version: "3"
+
+services:
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: nginx-laravel
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/:/etc/nginx/conf.d/
+    depends_on:
+      - php
+      - mysql
+    networks:
+      - laravel
+
+  mysql:
+    image: mysql:5.7.22
+    container_name: mysql
+    restart: unless-stopped
+    tty: true
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: root
+      SERVICE_TAG: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql/
+      - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
+    ports:
+      - "3306:3306"
+    networks:
+      - laravel
+
+  php:
+    image: php-laravel
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+    container_name: php-laravel
+    restart: unless-stopped
+    tty: true
+    working_dir: /var/www
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    volumes:
+      - .:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - laravel
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: laravel-phpmyadmin
+    restart: always
+    ports:
+      - 8088:80
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: test
+    depends_on:
+      - mysql
+    networks:
+      - laravel
+
+  composer:
+    image: composer:1.10
+    container_name: composer
+    volumes:
+      - .:/var/www
+    working_dir: /var/www
+    networks:
+      - laravel
+
+  node:
+    image: node:14.8.0-alpine3.10
+    container_name: node
+    volumes:
+      - ./:/var/www
+    working_dir: /var/www
+    entrypoint: ['npm']
+    networks:
+      - laravel
+  artisan:
+    image: php-laravel
+    container_name: artisan
+    volumes:
+      - .:/var/www
+    depends_on:
+      - mysql
+    entrypoint: ['/var/www/artisan']
+    networks:
+      - laravel
+
+networks:
+  laravel:
+    #d driver: bridge
+
+volumes:
+  dbdata:
+    driver: local
